@@ -171,17 +171,12 @@ void ArrayTools::contractFieldFieldScalar(ArrayOutFields &            outputFiel
 } // end contractFieldFieldScalar
 
 // FIXME these should be Scalars
-typedef Kokkos::View<Scalar****> input_view_t;
-typedef Kokkos::View<Scalar***> output_view_t;
-
-typedef output_view_t::HostMirror output_host_t;
-typedef input_view_t::HostMirror input_host_t;
-
+template <class Scalar, class input_view_type, class output_view_type>
 struct ContractFieldFieldVectorKokkosFunctor {
-  input_view_t _leftFields;
-  input_view_t _rightFields;
+  input_view_type _leftFields;
+  input_view_type _rightFields;
 
-  output_view_t _outputFields;
+  output_view_type _outputFields;
 
   int _numLeftFields;
   int _numRightFields;
@@ -195,9 +190,9 @@ struct ContractFieldFieldVectorKokkosFunctor {
     int numPoints,
     int dimVec,
     bool sumInto,
-    input_view_t leftFields,
-    input_view_t rightFields,
-    output_view_t outputFields
+    input_view_type leftFields,
+    input_view_type rightFields,
+    output_view_type outputFields
     )
     :_leftFields(leftFields), _rightFields(rightFields),
     _outputFields(outputFields),
@@ -359,6 +354,12 @@ void ArrayTools::contractFieldFieldVector(ArrayOutFields &            outputFiel
     break;
 
     case COMP_KOKKOS: {
+      typedef Kokkos::View<Scalar****> input_view_t;
+      typedef Kokkos::View<Scalar***> output_view_t;
+
+      typedef typename output_view_t::HostMirror output_host_t;
+      typedef typename input_view_t::HostMirror input_host_t;
+
       Kokkos::initialize();
 
       input_view_t kokkosLeft("left_input", numCells, numLeftFields, numPoints, dimVec);
@@ -369,7 +370,6 @@ void ArrayTools::contractFieldFieldVector(ArrayOutFields &            outputFiel
       input_host_t hostRight = Kokkos::create_mirror_view(kokkosRight);
       output_host_t hostOutput = Kokkos::create_mirror_view(kokkosOutput);
 
-#if 0
       for (int cl = 0; cl < numCells; cl++) {
         for (int qp = 0; qp < numPoints; qp++) {
           for (int iVec = 0; iVec < dimVec; iVec++) {
@@ -392,7 +392,7 @@ void ArrayTools::contractFieldFieldVector(ArrayOutFields &            outputFiel
       Kokkos::deep_copy(kokkosRight, hostRight);
       Kokkos::deep_copy(kokkosOutput, hostOutput);
 
-      ContractFieldFieldVectorKokkosFunctor kokkosFunctor( numLeftFields,
+      ContractFieldFieldVectorKokkosFunctor<Scalar, input_view_t, output_view_t> kokkosFunctor(numLeftFields,
           numRightFields, numPoints, dimVec, sumInto, kokkosLeft, kokkosRight,
           kokkosOutput);
 
@@ -410,7 +410,6 @@ void ArrayTools::contractFieldFieldVector(ArrayOutFields &            outputFiel
       } //C-loop
 
       Kokkos::finalize();
-#endif
     }
     break;
 
