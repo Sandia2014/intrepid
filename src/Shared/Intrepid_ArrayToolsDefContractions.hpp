@@ -46,6 +46,8 @@
     \author Created by P. Bochev and D. Ridzal.
 */
 
+#include <Kokkos_Core.hpp>
+
 namespace Intrepid {
   
 template<class Scalar, class ArrayOutFields, class ArrayInFieldsLeft, class ArrayInFieldsRight>
@@ -168,6 +170,72 @@ void ArrayTools::contractFieldFieldScalar(ArrayOutFields &            outputFiel
   } // switch(compEngine)
 } // end contractFieldFieldScalar
 
+// FIXME these should be Scalars
+typedef Kokkos::View<Scalar****> input_view_t;
+typedef Kokkos::View<Scalar***> output_view_t;
+
+typedef output_view_t::HostMirror output_host_t;
+typedef input_view_t::HostMirror input_host_t;
+
+struct ContractFieldFieldVectorKokkosFunctor {
+  input_view_t _leftFields;
+  input_view_t _rightFields;
+
+  output_view_t _outputFields;
+
+  int _numLeftFields;
+  int _numRightFields;
+  int _numPoints;
+  int _dimVec;
+  bool _sumInto;
+
+  ContractFieldFieldVectorKokkosFunctor(
+    int numLeftFields,
+    int numRightFields,
+    int numPoints,
+    int dimVec,
+    bool sumInto,
+    input_view_t leftFields,
+    input_view_t rightFields,
+    output_view_t outputFields
+    )
+    :_leftFields(leftFields), _rightFields(rightFields),
+    _outputFields(outputFields),
+    _numLeftFields(numLeftFields), _numRightFields(numRightFields),
+    _numPoints(numPoints), _dimVec(dimVec), _sumInto(sumInto)
+  { }
+
+  KOKKOS_INLINE_FUNCTION
+    void operator() (const unsigned int elementIndex) const {
+      if (_sumInto) {
+        for (int lbf = 0; lbf < _numLeftFields; lbf++) {
+          for (int rbf = 0; rbf < _numRightFields; rbf++) {
+            Scalar tmpVal(0);
+            for (int qp = 0; qp < _numPoints; qp++) {
+              for (int iVec = 0; iVec < _dimVec; iVec++) {
+                tmpVal += _leftFields(elementIndex, lbf, qp, iVec)*_rightFields(elementIndex, rbf, qp, iVec);
+              } //D-loop
+            } // P-loop
+            _outputFields(elementIndex, lbf, rbf) += tmpVal;
+          } // R-loop
+        } // L-loop
+      }
+
+      else {
+        for (int lbf = 0; lbf < _numLeftFields; lbf++) {
+          for (int rbf = 0; rbf < _numRightFields; rbf++) {
+            Scalar tmpVal(0);
+            for (int qp = 0; qp < _numPoints; qp++) {
+              for (int iVec = 0; iVec < _dimVec; iVec++) {
+                tmpVal += _leftFields(elementIndex, lbf, qp, iVec)*_rightFields(elementIndex, rbf, qp, iVec);
+              } //D-loop
+            } // P-loop
+            _outputFields(elementIndex, lbf, rbf) = tmpVal;
+          } // R-loop
+        } // L-loop
+      }
+    }
+};
 
 template<class Scalar, class ArrayOutFields, class ArrayInFieldsLeft, class ArrayInFieldsRight>
 void ArrayTools::contractFieldFieldVector(ArrayOutFields &            outputFields,
@@ -287,6 +355,62 @@ void ArrayTools::contractFieldFieldVector(ArrayOutFields &            outputFiel
                     beta, &outputFields[cl*skipOp], numLeftFields);
         */
       }
+    }
+    break;
+
+    case COMP_KOKKOS: {
+      Kokkos::initialize();
+
+      input_view_t kokkosLeft("left_input", numCells, numLeftFields, numPoints, dimVec);
+      input_view_t kokkosRight("right_input", numCells, numRightFields, numPoints, dimVec);
+      output_view_t kokkosOutput("output", numCells, numLeftFields, numRightFields);
+
+      input_host_t hostLeft = Kokkos::create_mirror_view(kokkosLeft);
+      input_host_t hostRight = Kokkos::create_mirror_view(kokkosRight);
+      output_host_t hostOutput = Kokkos::create_mirror_view(kokkosOutput);
+
+#if 0
+      for (int cl = 0; cl < numCells; cl++) {
+        for (int qp = 0; qp < numPoints; qp++) {
+          for (int iVec = 0; iVec < dimVec; iVec++) {
+            for (int lbf = 0; lbf < numLeftFields; lbf++) {
+              hostLeft(cl, lbf, qp, iVec) = leftFields(cl, lbf, qp, iVec);
+            } // L-loop
+            for (int rbf = 0; rbf < numRightFields; rbf++) {
+              hostRight(cl, rbf, qp, iVec) = rightFields(cl, rbf, qp, iVec);
+            } // R-loop
+          } // D-loop
+        } // P-loop
+        for (int lbf = 0; lbf < numLeftFields; lbf++) {
+          for (int rbf = 0; rbf < numRightFields; rbf++) {
+            hostOutput(cl, lbf, rbf) = outputFields(cl, lbf, rbf);
+          } // R-loop
+        } // L-loop
+      } // C-loop
+
+      Kokkos::deep_copy(kokkosLeft, hostLeft);
+      Kokkos::deep_copy(kokkosRight, hostRight);
+      Kokkos::deep_copy(kokkosOutput, hostOutput);
+
+      ContractFieldFieldVectorKokkosFunctor kokkosFunctor( numLeftFields,
+          numRightFields, numPoints, dimVec, sumInto, kokkosLeft, kokkosRight,
+          kokkosOutput);
+
+      Kokkos::parallel_for(numCells, kokkosFunctor);
+
+      Kokkos::fence();
+      Kokkos::deep_copy(hostOutput, kokkosOutput);
+
+      for (int cl = 0; cl < numCells; cl++) {
+        for (int lbf = 0; lbf < numLeftFields; lbf++) {
+          for (int rbf = 0; rbf < numRightFields; rbf++) {
+            outputFields(cl, lbf, rbf) = hostOutput(cl, lbf, rbf);
+          } // R-loop
+        } // L-loop
+      } //C-loop
+
+      Kokkos::finalize();
+#endif
     }
     break;
 

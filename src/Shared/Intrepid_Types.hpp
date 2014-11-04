@@ -529,7 +529,8 @@ namespace Intrepid {
   {
     COMP_CPP = 0,             
     COMP_BLAS,
-    COMP_ENGINE_MAX
+    COMP_ENGINE_MAX,
+    COMP_KOKKOS
   };
 
   inline std::string ECompEngineToString(ECompEngine cEngine) {
@@ -538,6 +539,7 @@ namespace Intrepid {
       case COMP_CPP:             retString = "Native C++";           break;
       case COMP_BLAS:            retString = "BLAS";                 break;
       case COMP_ENGINE_MAX:      retString = "Max. Comp. Engine";    break;
+      case COMP_KOKKOS:          retString = "Kokkos";               break;
       default:                   retString = "INVALID ECompEngine";
     }
     return retString;
