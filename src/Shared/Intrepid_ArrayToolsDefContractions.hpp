@@ -46,6 +46,8 @@
     \author Created by P. Bochev and D. Ridzal.
 */
 
+#include <Kokkos_Core.hpp>
+
 namespace Intrepid {
   
 template<class Scalar, class ArrayOutFields, class ArrayInFieldsLeft, class ArrayInFieldsRight>
@@ -296,7 +298,83 @@ void ArrayTools::contractFieldFieldVector(ArrayOutFields &            outputFiel
   } // switch(compEngine)
 } // end contractFieldFieldVector
 
-    
+   
+template<class Scalar, class LeftViewType, class RightViewType, class OutputViewType>
+struct ContractFieldFieldTensorFunctor {
+  LeftViewType _leftFields;
+  RightViewType _rightFields;
+  OutputViewType _outputFields;
+  int _numLeftFields;
+  int _numRightFields;
+  int _numPoints;
+  int _dim1Tensor;
+  int _dim2Tensor;
+  bool _sumInto;
+
+  ContractFieldFieldTensorFunctor(
+      LeftViewType leftFields,
+      RightViewType rightFields,
+      OutputViewType outputFields,
+      int numLeftFields,
+      int numRightFields,
+      int numPoints,
+      int dim1Tensor,
+      int dim2Tensor,
+      bool sumInto) :
+    _leftFields(leftFields),
+    _rightFields(rightFields),
+    _outputFields(outputFields),
+    _numLeftFields(numLeftFields),
+    _numRightFields(numRightFields),
+    _numPoints(numPoints),
+    _dim1Tensor(dim1Tensor),
+    _dim2Tensor(dim2Tensor),
+    _sumInto(sumInto)
+  {
+    // Nothing to do
+  }
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const unsigned int elementIndex) const {
+    if (_sumInto) {
+      for (int lbf = 0; lbf < _numLeftFields; lbf++) {
+        for (int rbf = 0; rbf < _numRightFields; rbf++) {
+          Scalar tmpVal(0);
+          for (int qp = 0; qp < _numPoints; qp++) {
+            for (int iTens1 = 0; iTens1 < _dim1Tensor; iTens1++) {
+              for (int iTens2 = 0; iTens2 < _dim2Tensor; iTens2++) {
+                tmpVal += _leftFields(elementIndex, lbf, qp, iTens1, iTens2)*_rightFields(elementIndex, rbf, qp, iTens1, iTens2);
+              } // D2-loop
+            } // D1-loop
+          } // P-loop
+          _outputFields(elementIndex, lbf, rbf) += tmpVal;
+        } // R-loop
+      } // L-loop
+    }
+    else {
+      for (int lbf = 0; lbf < _numLeftFields; lbf++) {
+        for (int rbf = 0; rbf < _numRightFields; rbf++) {
+          Scalar tmpVal(0);
+          for (int qp = 0; qp < _numPoints; qp++) {
+            for (int iTens1 = 0; iTens1 < _dim1Tensor; iTens1++) {
+              for (int iTens2 = 0; iTens2 < _dim2Tensor; iTens2++) {
+                tmpVal += _leftFields(elementIndex, lbf, qp, iTens1, iTens2)*_rightFields(elementIndex, rbf, qp, iTens1, iTens2);
+              } // D2-loop
+            } // D1-loop
+          } // P-loop
+          _outputFields(elementIndex, lbf, rbf) = tmpVal;
+        } // R-loop
+      } // L-loop
+    }
+  }
+
+};
+
+
+
+
+
+
 template<class Scalar, class ArrayOutFields, class ArrayInFieldsLeft, class ArrayInFieldsRight>
 void ArrayTools::contractFieldFieldTensor(ArrayOutFields &            outputFields,
                                           const ArrayInFieldsLeft &   leftFields,
@@ -371,6 +449,79 @@ void ArrayTools::contractFieldFieldTensor(ArrayOutFields &            outputFiel
           } // L-loop
         } // C-loop
       }
+    }
+    break;
+
+    case COMP_KOKKOS: {
+      
+      typedef Kokkos::View<Scalar*****> input_view_t;
+      typedef Kokkos::View<Scalar***> output_view_t;
+
+      typedef typename input_view_t::HostMirror input_host_t;
+      typedef typename output_view_t::HostMirror output_host_t;
+
+      Kokkos::initialize();
+
+      input_view_t kokkosLeft("left_input", numCells, numLeftFields, numPoints, dim1Tensor, dim2Tensor);
+      input_view_t kokkosRight("right_input", numCells, numRightFields, numPoints, dim1Tensor, dim2Tensor);
+      output_view_t kokkosOut("output", numCells, numLeftFields, numRightFields);
+
+      input_host_t hostLeft = Kokkos::create_mirror_view(kokkosLeft);
+      input_host_t hostRight = Kokkos::create_mirror_view(kokkosRight);
+      output_host_t hostOut = Kokkos::create_mirror_view(kokkosOut);
+
+      // Copy everything
+      for (int cl = 0; cl < numCells; ++cl) {
+        for (int lbf = 0; lbf < numLeftFields; ++lbf) {
+          for (int qp = 0; qp < numPoints; ++qp) {
+            for (int iTens1 = 0; iTens1 < dim1Tensor; ++iTens1) {
+              for (int iTens2 = 0; iTens2 < dim2Tensor; ++iTens2) {
+                hostLeft(cl, lbf, qp, iTens1, iTens2) = leftFields(cl, lbf, qp, iTens1, iTens2);
+              }
+            }
+          }
+        }
+        for (int rbf = 0; rbf < numRightFields; ++rbf) {
+          for (int qp = 0; qp < numPoints; ++qp) {
+            for (int iTens1 = 0; iTens1 < dim1Tensor; ++iTens1) {
+              for (int iTens2 = 0; iTens2 < dim2Tensor; ++iTens2) {
+                hostRight(cl, rbf, qp, iTens1, iTens2) = rightFields(cl, rbf, qp, iTens1, iTens2);
+              }
+            }
+          }
+        }
+        for (int lbf = 0; lbf < numLeftFields; ++lbf) {
+          for (int rbf = 0; rbf < numRightFields; ++rbf) {
+            hostOut(cl, lbf, rbf) = outputFields(cl, lbf, rbf);
+          }
+        }
+      }
+
+      Kokkos::deep_copy(kokkosLeft, hostLeft);
+      Kokkos::deep_copy(kokkosRight, hostRight);
+      Kokkos::deep_copy(kokkosOut, hostOut);
+
+      ContractFieldFieldTensorFunctor<Scalar, input_view_t, input_view_t, output_view_t> 
+        kokkosFunctor(kokkosLeft, kokkosRight, kokkosOut,
+            numLeftFields, numRightFields, numPoints,
+            dim1Tensor, dim2Tensor, sumInto);
+      
+      Kokkos::parallel_for(numCells, kokkosFunctor);
+
+      Kokkos::fence();
+
+      Kokkos::deep_copy(hostOut, kokkosOut);
+
+      for (int cl = 0; cl < numCells; ++cl) {
+        for (int lbf = 0; lbf < numLeftFields; ++lbf) {
+          for (int rbf = 0; rbf < numRightFields; ++rbf) {
+            outputFields(cl, lbf, rbf) = hostOut(cl, lbf, rbf);
+          }
+        }
+      }
+
+      Kokkos::finalize();
+      
     }
     break;
 

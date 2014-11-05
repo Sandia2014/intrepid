@@ -529,7 +529,8 @@ namespace Intrepid {
   {
     COMP_CPP = 0,             
     COMP_BLAS,
-    COMP_ENGINE_MAX
+    COMP_ENGINE_MAX,
+    COMP_KOKKOS
   };
 
   inline std::string ECompEngineToString(ECompEngine cEngine) {
