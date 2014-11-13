@@ -41,8 +41,8 @@
 // ************************************************************************
 // @HEADER
 
-/** \file test_05.cpp
-\brief  Unit test for the clone / scale operations of the ArrayTools class.
+/** \file test_01.cpp
+\brief  Unit test for the ArrayTools class.
 \author Created by P. Bochev and D. Ridzal.
 */
 
@@ -69,7 +69,6 @@ using namespace Intrepid;
   };                                                                                                                \
 }
 
-
 int main(int argc, char *argv[]) {
 
   Teuchos::GlobalMPISession mpiSession(&argc, &argv);
@@ -93,7 +92,7 @@ int main(int argc, char *argv[]) {
   << "|                                                                             |\n" \
   << "|                     Timing Test (ArrayTools)                                |\n" \
   << "|                                                                             |\n" \
-  << "|     1) Array operations: clone / scale                                      |\n" \
+  << "|     1) Array operations: contractions                                       |\n" \
   << "|                                                                             |\n" \
   << "|  Questions? Contact  Pavel Bochev (pbboche@sandia.gov) or                   |\n" \
   << "|                      Denis Ridzal (dridzal@sandia.gov).                     |\n" \
@@ -107,7 +106,7 @@ int main(int argc, char *argv[]) {
   int errorFlag = 0;
 #ifdef HAVE_INTREPID_DEBUG
   int beginThrowNumber = Teuchos::TestForException_getThrowNumber();
-  int endThrowNumber = beginThrowNumber + 21;
+  int endThrowNumber = beginThrowNumber + 81;
 #endif
 
   typedef ArrayTools art; 
@@ -125,54 +124,149 @@ int main(int argc, char *argv[]) {
   try{
 
 #ifdef HAVE_INTREPID_DEBUG
-    FieldContainer<double> a_2(2);
-    FieldContainer<double> a_9_2(9, 2);
+    FieldContainer<double> a_2_2(2, 2);
     FieldContainer<double> a_10_2(10, 2);
     FieldContainer<double> a_10_3(10, 3);
     FieldContainer<double> a_10_2_2(10, 2, 2);
-    FieldContainer<double> a_10_2_2_2(10, 2, 2, 2);
-    FieldContainer<double> a_10_3_2_2(10, 3, 2, 2);
+    FieldContainer<double> a_10_2_3(10, 2, 3);
     FieldContainer<double> a_10_3_2(10, 3, 2);
-    FieldContainer<double> a_2_2(2, 2);
-    FieldContainer<double> a_2_3_2_2(2, 3, 2, 2);
-    FieldContainer<double> a_2_2_2_2(2, 2, 2, 2);
+    FieldContainer<double> a_9_2_2(9, 2, 2);
+
+    *outStream << "-> contractFieldFieldScalar:\n";
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldScalar<double>(a_2_2, a_2_2, a_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldScalar<double>(a_2_2, a_10_2_2, a_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldScalar<double>(a_2_2, a_10_2_2, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldScalar<double>(a_10_2_2, a_9_2_2, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldScalar<double>(a_10_2_2, a_10_2_2, a_10_2_3, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldScalar<double>(a_9_2_2, a_10_3_2, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldScalar<double>(a_10_3_2, a_10_2_2, a_10_3_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldScalar<double>(a_10_2_2, a_10_2_2, a_10_3_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldScalar<double>(a_10_2_3, a_10_2_2, a_10_3_2, COMP_ENGINE_MAX) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldScalar<double>(a_10_2_3, a_10_2_2, a_10_3_2, COMP_CPP) );
+
+    FieldContainer<double> a_10_2_2_2(10, 2, 2, 2);
+    FieldContainer<double> a_9_2_2_2(9, 2, 2, 2);
+    FieldContainer<double> a_10_3_2_2(10, 3, 2, 2);
+    FieldContainer<double> a_10_2_3_2(10, 2, 3, 2);
+    FieldContainer<double> a_10_2_2_3(10, 2, 2, 3);
+
+    *outStream << "-> contractFieldFieldVector:\n";
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldVector<double>(a_2_2, a_2_2, a_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldVector<double>(a_2_2, a_10_2_2_2, a_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldVector<double>(a_2_2, a_10_2_2_2, a_10_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldVector<double>(a_10_2_2, a_9_2_2_2, a_10_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldVector<double>(a_10_2_2, a_10_2_2_2, a_10_2_3_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldVector<double>(a_10_2_2, a_10_2_2_2, a_10_2_2_3, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldVector<double>(a_9_2_2, a_10_2_2_2, a_10_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldVector<double>(a_10_3_2, a_10_2_2_2, a_10_3_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldVector<double>(a_10_2_2, a_10_2_2_2, a_10_3_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldVector<double>(a_10_2_3, a_10_2_2_2, a_10_3_2_2, COMP_ENGINE_MAX) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldVector<double>(a_10_2_3, a_10_2_2_2, a_10_3_2_2, COMP_CPP) );
+
     FieldContainer<double> a_10_2_2_2_2(10, 2, 2, 2, 2);
+    FieldContainer<double> a_9_2_2_2_2(9, 2, 2, 2, 2);
     FieldContainer<double> a_10_3_2_2_2(10, 3, 2, 2, 2);
     FieldContainer<double> a_10_2_3_2_2(10, 2, 3, 2, 2);
     FieldContainer<double> a_10_2_2_3_2(10, 2, 2, 3, 2);
     FieldContainer<double> a_10_2_2_2_3(10, 2, 2, 2, 3);
 
-    *outStream << "-> cloneFields:\n";
-    INTREPID_TEST_COMMAND( atools.cloneFields<double>(a_10_2_2_2, a_2) );
-    INTREPID_TEST_COMMAND( atools.cloneFields<double>(a_10_2_2_2, a_10_2) );
-    INTREPID_TEST_COMMAND( atools.cloneFields<double>(a_10_3_2, a_2_2) );
-    INTREPID_TEST_COMMAND( atools.cloneFields<double>(a_10_2_2_2_2, a_2_3_2_2) );
-    INTREPID_TEST_COMMAND( atools.cloneFields<double>(a_10_2_2_3_2, a_2_2_2_2) );
-    INTREPID_TEST_COMMAND( atools.cloneFields<double>(a_10_2_2_2_3, a_2_2_2_2) );
-    INTREPID_TEST_COMMAND( atools.cloneFields<double>(a_10_2_2, a_2_2) );
-    INTREPID_TEST_COMMAND( atools.cloneFields<double>(a_10_2_2_2_2, a_2_2_2_2) );
+    *outStream << "-> contractFieldFieldTensor:\n";
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldTensor<double>(a_2_2, a_2_2, a_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldTensor<double>(a_2_2, a_10_2_2_2_2, a_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldTensor<double>(a_2_2, a_10_2_2_2_2, a_10_2_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldTensor<double>(a_10_2_2, a_9_2_2_2_2, a_10_2_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldTensor<double>(a_10_2_2, a_10_2_2_2_2, a_10_2_3_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldTensor<double>(a_10_2_2, a_10_2_2_2_2, a_10_2_2_3_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldTensor<double>(a_10_2_2, a_10_2_2_2_2, a_10_2_2_2_3, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldTensor<double>(a_9_2_2, a_10_2_2_2_2, a_10_2_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldTensor<double>(a_10_3_2, a_10_2_2_2_2, a_10_2_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldTensor<double>(a_10_2_2, a_10_2_2_2_2, a_10_3_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldTensor<double>(a_10_2_3, a_10_2_2_2_2, a_10_3_2_2_2, COMP_ENGINE_MAX) );
+    INTREPID_TEST_COMMAND( atools.contractFieldFieldTensor<double>(a_10_2_3, a_10_2_2_2_2, a_10_3_2_2_2, COMP_CPP) );
 
-    *outStream << "-> cloneScaleFields:\n";
-    INTREPID_TEST_COMMAND( atools.cloneScaleFields<double>(a_10_2_2_2, a_2, a_2) );
-    INTREPID_TEST_COMMAND( atools.cloneScaleFields<double>(a_10_2_2_2, a_10_2, a_2) );
-    INTREPID_TEST_COMMAND( atools.cloneScaleFields<double>(a_10_2_2_2, a_10_2, a_10_2) );
-    INTREPID_TEST_COMMAND( atools.cloneScaleFields<double>(a_10_2_2, a_9_2, a_10_2) );
-    INTREPID_TEST_COMMAND( atools.cloneScaleFields<double>(a_10_2_2, a_10_3, a_10_2) );
-    INTREPID_TEST_COMMAND( atools.cloneScaleFields<double>(a_10_3_2_2_2, a_10_3, a_2_2_2_2) );
-    INTREPID_TEST_COMMAND( atools.cloneScaleFields<double>(a_10_2_3_2_2, a_10_2, a_2_2_2_2) );
-    INTREPID_TEST_COMMAND( atools.cloneScaleFields<double>(a_10_2_2_3_2, a_10_2, a_2_2_2_2) );
-    INTREPID_TEST_COMMAND( atools.cloneScaleFields<double>(a_10_2_2_2_3, a_10_2, a_2_2_2_2) );
-    INTREPID_TEST_COMMAND( atools.cloneScaleFields<double>(a_10_2_2, a_10_2, a_2_2) );
-    INTREPID_TEST_COMMAND( atools.cloneScaleFields<double>(a_10_2_2_2_2, a_10_2, a_2_2_2_2) );
+    FieldContainer<double> a_9_2(9, 2);
+    FieldContainer<double> a_10_1(10, 1);
 
-    *outStream << "-> scaleFields:\n";
-    INTREPID_TEST_COMMAND( atools.scaleFields<double>(a_10_2_2_2, a_2) );
-    INTREPID_TEST_COMMAND( atools.scaleFields<double>(a_10_2, a_2_2) );
-    INTREPID_TEST_COMMAND( atools.scaleFields<double>(a_10_2_2, a_2_2) );
-    INTREPID_TEST_COMMAND( atools.scaleFields<double>(a_10_3_2, a_10_2) );
-    INTREPID_TEST_COMMAND( atools.scaleFields<double>(a_10_3_2_2, a_10_2) );
-    INTREPID_TEST_COMMAND( atools.scaleFields<double>(a_10_3_2_2_2, a_10_2) );
-    INTREPID_TEST_COMMAND( atools.scaleFields<double>(a_10_2_2_2_2, a_10_2) );
+    *outStream << "-> contractDataFieldScalar:\n";
+    INTREPID_TEST_COMMAND( atools.contractDataFieldScalar<double>(a_2_2, a_2_2, a_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldScalar<double>(a_2_2, a_10_2_2, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldScalar<double>(a_10_2_2, a_2_2, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldScalar<double>(a_2_2, a_10_2, a_9_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldScalar<double>(a_2_2, a_10_3, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldScalar<double>(a_9_2, a_10_2, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldScalar<double>(a_10_2, a_10_2, a_10_3_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldScalar<double>(a_10_2, a_10_2, a_10_2_2, COMP_ENGINE_MAX) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldScalar<double>(a_10_2, a_10_2, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldScalar<double>(a_10_2, a_10_1, a_10_2_2, COMP_CPP) );
+
+    FieldContainer<double> a_10_1_2(10, 1, 2);
+    FieldContainer<double> a_10_1_3(10, 1, 3);
+
+    *outStream << "-> contractDataFieldVector:\n";
+    INTREPID_TEST_COMMAND( atools.contractDataFieldVector<double>(a_2_2, a_2_2, a_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldVector<double>(a_2_2, a_2_2, a_10_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldVector<double>(a_10_2_2, a_10_2_2, a_10_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldVector<double>(a_2_2, a_10_2_2, a_9_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldVector<double>(a_2_2, a_10_2_2, a_10_2_3_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldVector<double>(a_2_2, a_10_2_2, a_10_2_2_3, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldVector<double>(a_9_2, a_10_2_2, a_10_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldVector<double>(a_10_2, a_10_2_2, a_10_3_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldVector<double>(a_10_2, a_10_2_2, a_10_2_2_2, COMP_ENGINE_MAX) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldVector<double>(a_10_2, a_10_2_2, a_10_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldVector<double>(a_10_2, a_10_1_2, a_10_2_2_2, COMP_CPP) );
+
+    FieldContainer<double> a_10_1_2_2(10, 1, 2, 2);
+
+    *outStream << "-> contractDataFieldTensor:\n";
+    INTREPID_TEST_COMMAND( atools.contractDataFieldTensor<double>(a_2_2, a_2_2, a_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldTensor<double>(a_2_2, a_2_2, a_10_2_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldTensor<double>(a_10_2_2, a_10_2_2_2, a_10_2_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldTensor<double>(a_2_2, a_10_2_2_2, a_9_2_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldTensor<double>(a_2_2, a_10_2_2_2, a_10_2_3_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldTensor<double>(a_2_2, a_10_2_2_2, a_10_2_2_3_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldTensor<double>(a_2_2, a_10_2_2_2, a_10_2_2_2_3, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldTensor<double>(a_9_2, a_10_2_2_2, a_10_2_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldTensor<double>(a_10_2, a_10_2_2_2, a_10_3_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldTensor<double>(a_10_2, a_10_2_2_2, a_10_2_2_2_2, COMP_ENGINE_MAX) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldTensor<double>(a_10_2, a_10_2_2_2, a_10_2_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataFieldTensor<double>(a_10_2, a_10_1_2_2, a_10_2_2_2_2, COMP_CPP) );
+
+    FieldContainer<double> a_2(2);
+    FieldContainer<double> a_10(10);
+
+    *outStream << "-> contractDataDataScalar:\n";
+    INTREPID_TEST_COMMAND( atools.contractDataDataScalar<double>(a_2_2, a_10_2_2, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataScalar<double>(a_2_2, a_10_2, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataScalar<double>(a_2_2, a_10_2, a_10_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataScalar<double>(a_2, a_9_2, a_10_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataScalar<double>(a_2, a_10_2, a_10_3, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataScalar<double>(a_2, a_10_2, a_10_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataScalar<double>(a_10, a_10_2, a_10_2, COMP_ENGINE_MAX) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataScalar<double>(a_10, a_10_2, a_10_2, COMP_CPP) );
+
+    *outStream << "-> contractDataDataVector:\n";
+    INTREPID_TEST_COMMAND( atools.contractDataDataVector<double>(a_2_2, a_2_2, a_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataVector<double>(a_2_2, a_10_2_2, a_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataVector<double>(a_2_2, a_10_2_2, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataVector<double>(a_10, a_9_2_2, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataVector<double>(a_10, a_10_3_2, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataVector<double>(a_10, a_10_2_3, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataVector<double>(a_2, a_10_2_2, a_10_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataVector<double>(a_10, a_10_2_2, a_10_2_2, COMP_ENGINE_MAX) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataVector<double>(a_10, a_10_2_2, a_10_2_2, COMP_CPP) );
+
+    *outStream << "-> contractDataDataTensor:\n";
+    INTREPID_TEST_COMMAND( atools.contractDataDataTensor<double>(a_2_2, a_2_2, a_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataTensor<double>(a_2_2, a_10_2_2_2, a_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataTensor<double>(a_2_2, a_10_2_2_2, a_10_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataTensor<double>(a_10, a_9_2_2_2, a_10_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataTensor<double>(a_10, a_10_2_2_2, a_10_3_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataTensor<double>(a_10, a_10_2_2_2, a_10_2_3_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataTensor<double>(a_10, a_10_2_2_2, a_10_2_2_3, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataTensor<double>(a_2, a_10_2_2_2, a_10_2_2_2, COMP_CPP) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataTensor<double>(a_10, a_10_2_2_2, a_10_2_2_2, COMP_ENGINE_MAX) );
+    INTREPID_TEST_COMMAND( atools.contractDataDataTensor<double>(a_10, a_10_2_2_2, a_10_2_2_2, COMP_CPP) );
+
 #endif
 
   }
@@ -198,192 +292,411 @@ int main(int argc, char *argv[]) {
 
   try {
       { // start scope
-      *outStream << "\n************ Checking cloneFields ************\n";
+      *outStream << "\n************ Checking contractFieldFieldScalar ************\n";
 
-      int c=5, p=9, f=7, d1=7, d2=13;
+      int c=100000, p=9, l=3, r=7;
 
-      FieldContainer<double> in_f_p(f, p);
-      FieldContainer<double> in_f_p_d(f, p, d1);
-      FieldContainer<double> in_f_p_d_d(f, p, d1, d2);
-      FieldContainer<double> in_c_f_p(c, f, p);
-      FieldContainer<double> in_c_f_p_d(c, f, p, d1);
-      FieldContainer<double> in_c_f_p_d_d(c, f, p, d1, d2);
-      FieldContainer<double> data_c_p_one(c, p);
-      FieldContainer<double> out_c_f_p(c, f, p);
-      FieldContainer<double> out_c_f_p_d(c, f, p, d1);
-      FieldContainer<double> out_c_f_p_d_d(c, f, p, d1, d2);
-      double zero = INTREPID_TOL*100.0;
+      FieldContainer<double> in_c_l_p(c, l, p);
+      FieldContainer<double> in_c_r_p(c, r, p);
+      FieldContainer<double> out1_c_l_r(c, l, r);
+      FieldContainer<double> out2_c_l_r(c, l, r);
+      double zero = INTREPID_TOL*10000.0;
 
       // fill with random numbers
-      for (int i=0; i<in_f_p.size(); i++) {
-        in_f_p[i] = Teuchos::ScalarTraits<double>::random();
+      for (int i=0; i<in_c_l_p.size(); i++) {
+        in_c_l_p[i] = Teuchos::ScalarTraits<double>::random();
       }
-      for (int i=0; i<in_f_p_d.size(); i++) {
-        in_f_p_d[i] = Teuchos::ScalarTraits<double>::random();
-      }
-      for (int i=0; i<in_f_p_d_d.size(); i++) {
-        in_f_p_d_d[i] = Teuchos::ScalarTraits<double>::random();
-      }
-      for (int i=0; i<data_c_p_one.size(); i++) {
-        data_c_p_one[i] = 1.0;
+      for (int i=0; i<in_c_r_p.size(); i++) {
+        in_c_r_p[i] = Teuchos::ScalarTraits<double>::random();
       }
 
-      art::cloneFields<double>(out_c_f_p, in_f_p);
-      art::scalarMultiplyDataField<double>(in_c_f_p, data_c_p_one, in_f_p);
-      rst::subtract(&out_c_f_p[0], &in_c_f_p[0], out_c_f_p.size());
-      if (rst::vectorNorm(&out_c_f_p[0], out_c_f_p.size(), NORM_ONE) > zero) {
-        *outStream << "\n\nINCORRECT cloneFields (1): check multiplyScalarData vs. cloneFields\n\n";
-        errorFlag = -1000;
+      art::contractFieldFieldScalar<double>(out1_c_l_r, in_c_l_p, in_c_r_p, COMP_CPP);
+      art::contractFieldFieldScalar<double>(out2_c_l_r, in_c_l_p, in_c_r_p, COMP_BLAS);
+      rst::subtract(&out1_c_l_r[0], &out2_c_l_r[0], out2_c_l_r.size());
+      if (rst::vectorNorm(&out1_c_l_r[0], out1_c_l_r.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractFieldFieldScalar (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l_r[0], out1_c_l_r.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
       }
-      art::cloneFields<double>(out_c_f_p_d, in_f_p_d);
-      art::scalarMultiplyDataField<double>(in_c_f_p_d, data_c_p_one, in_f_p_d);
-      rst::subtract(&out_c_f_p_d[0], &in_c_f_p_d[0], out_c_f_p_d.size());
-      if (rst::vectorNorm(&out_c_f_p_d[0], out_c_f_p_d.size(), NORM_ONE) > zero) {
-        *outStream << "\n\nINCORRECT cloneFields (2): check multiplyScalarData vs. cloneFields\n\n";
-        errorFlag = -1000;
-      }
-      art::cloneFields<double>(out_c_f_p_d_d, in_f_p_d_d);
-      art::scalarMultiplyDataField<double>(in_c_f_p_d_d, data_c_p_one, in_f_p_d_d);
-      rst::subtract(&out_c_f_p_d_d[0], &in_c_f_p_d_d[0], out_c_f_p_d_d.size());
-      if (rst::vectorNorm(&out_c_f_p_d_d[0], out_c_f_p_d_d.size(), NORM_ONE) > zero) {
-        *outStream << "\n\nINCORRECT cloneFields (3): check multiplyScalarData vs. cloneFields\n\n";
-        errorFlag = -1000;
+      // with sumInto:
+      out1_c_l_r.initialize(2.0); out2_c_l_r.initialize(2.0);
+      art::contractFieldFieldScalar<double>(out1_c_l_r, in_c_l_p, in_c_r_p, COMP_CPP, true);
+      art::contractFieldFieldScalar<double>(out2_c_l_r, in_c_l_p, in_c_r_p, COMP_BLAS, true);
+      rst::subtract(&out1_c_l_r[0], &out2_c_l_r[0], out2_c_l_r.size());
+      if (rst::vectorNorm(&out1_c_l_r[0], out1_c_l_r.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractFieldFieldScalar (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l_r[0], out1_c_l_r.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
       }
       } // end scope
 
       { // start scope
-      *outStream << "\n************ Checking cloneScaleFields ************\n";
-      int c=5, p=9, f=7, d1=7, d2=13;
+      *outStream << "\n************ Checking contractFieldFieldVector ************\n";
 
-      FieldContainer<double> in_f_p(f, p);
-      FieldContainer<double> in_f_p_d(f, p, d1);
-      FieldContainer<double> in_f_p_d_d(f, p, d1, d2);
-      FieldContainer<double> data_c_f(c, f);
-      FieldContainer<double> datainv_c_f(c, f);
-      FieldContainer<double> c_f_p_one(c, f, p);
-      FieldContainer<double> c_f_p_d_one(c, f, p, d1);
-      FieldContainer<double> c_f_p_d_d_one(c, f, p, d1, d2);
-      FieldContainer<double> out_c_f_p(c, f, p);
-      FieldContainer<double> outi_c_f_p(c, f, p);
-      FieldContainer<double> out_c_f_p_d(c, f, p, d1);
-      FieldContainer<double> outi_c_f_p_d(c, f, p, d1);
-      FieldContainer<double> out_c_f_p_d_d(c, f, p, d1, d2);
-      FieldContainer<double> outi_c_f_p_d_d(c, f, p, d1, d2);
-      double zero = INTREPID_TOL*100.0;
+      int c=100000, p=9, l=3, r=7, d=13;
 
-      // fill with 1's
-      for (int i=0; i<in_f_p.size(); i++) {
-        in_f_p[i] = 1.0;
-      }
-      for (int i=0; i<in_f_p_d.size(); i++) {
-        in_f_p_d[i] = 1.0;
-      }
-      for (int i=0; i<in_f_p_d_d.size(); i++) {
-        in_f_p_d_d[i] = 1.0;
-      }
-      for (int i=0; i<c_f_p_one.size(); i++) {
-        c_f_p_one[i] = 1.0;
-      }
-      for (int i=0; i<c_f_p_d_one.size(); i++) {
-        c_f_p_d_one[i] = 1.0;
-      }
-      for (int i=0; i<c_f_p_d_d_one.size(); i++) {
-        c_f_p_d_d_one[i] = 1.0;
-      }
+      FieldContainer<double> in_c_l_p_d(c, l, p, d);
+      FieldContainer<double> in_c_r_p_d(c, r, p, d);
+      FieldContainer<double> out1_c_l_r(c, l, r);
+      FieldContainer<double> out2_c_l_r(c, l, r);
+      double zero = INTREPID_TOL*10000.0;
+
       // fill with random numbers
-      for (int i=0; i<data_c_f.size(); i++) {
-        data_c_f[i] = Teuchos::ScalarTraits<double>::random();
-        datainv_c_f[i] = 1.0 / data_c_f[i];
+      for (int i=0; i<in_c_l_p_d.size(); i++) {
+        in_c_l_p_d[i] = Teuchos::ScalarTraits<double>::random();
+      }
+      for (int i=0; i<in_c_r_p_d.size(); i++) {
+        in_c_r_p_d[i] = Teuchos::ScalarTraits<double>::random();
       }
 
-      art::cloneScaleFields<double>(out_c_f_p, data_c_f, in_f_p);
-      art::cloneScaleFields<double>(outi_c_f_p, datainv_c_f, in_f_p);
-      for (int i=0; i<out_c_f_p.size(); i++) {
-        out_c_f_p[i] *= outi_c_f_p[i];
-      }
-      rst::subtract(&out_c_f_p[0], &c_f_p_one[0], out_c_f_p.size());
-      if (rst::vectorNorm(&out_c_f_p[0], out_c_f_p.size(), NORM_ONE) > zero) {
-        *outStream << "\n\nINCORRECT cloneScaleValue (1): check scalar inverse property\n\n";
-        errorFlag = -1000;
+      art::contractFieldFieldVector<double>(out1_c_l_r, in_c_l_p_d, in_c_r_p_d, COMP_CPP);
+      art::contractFieldFieldVector<double>(out2_c_l_r, in_c_l_p_d, in_c_r_p_d, COMP_BLAS);
+
+      rst::subtract(&out1_c_l_r[0], &out2_c_l_r[0], out2_c_l_r.size());
+      if (rst::vectorNorm(&out1_c_l_r[0], out1_c_l_r.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractFieldFieldVector (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l_r[0], out1_c_l_r.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
       }
 
-      art::cloneScaleFields<double>(out_c_f_p_d, data_c_f, in_f_p_d);
-      art::cloneScaleFields<double>(outi_c_f_p_d, datainv_c_f, in_f_p_d);
-      for (int i=0; i<out_c_f_p_d.size(); i++) {
-        out_c_f_p_d[i] *= outi_c_f_p_d[i];
-      }
-      rst::subtract(&out_c_f_p_d[0], &c_f_p_d_one[0], out_c_f_p_d.size());
-      if (rst::vectorNorm(&out_c_f_p_d[0], out_c_f_p_d.size(), NORM_ONE) > zero) {
-        *outStream << "\n\nINCORRECT cloneScaleValue (2): check scalar inverse property\n\n";
-        errorFlag = -1000;
-      }
+      // with sumInto:
+      out1_c_l_r.initialize(2.0); out2_c_l_r.initialize(2.0);
 
-      art::cloneScaleFields<double>(out_c_f_p_d_d, data_c_f, in_f_p_d_d);
-      art::cloneScaleFields<double>(outi_c_f_p_d_d, datainv_c_f, in_f_p_d_d);
-      for (int i=0; i<out_c_f_p_d_d.size(); i++) {
-        out_c_f_p_d_d[i] *= outi_c_f_p_d_d[i];
-      }
-      rst::subtract(&out_c_f_p_d_d[0], &c_f_p_d_d_one[0], out_c_f_p_d_d.size());
-      if (rst::vectorNorm(&out_c_f_p_d_d[0], out_c_f_p_d_d.size(), NORM_ONE) > zero) {
-        *outStream << "\n\nINCORRECT cloneScaleValue (3): check scalar inverse property\n\n";
-        errorFlag = -1000;
+      art::contractFieldFieldVector<double>(out1_c_l_r, in_c_l_p_d, in_c_r_p_d, COMP_CPP, true);
+      art::contractFieldFieldVector<double>(out2_c_l_r, in_c_l_p_d, in_c_r_p_d, COMP_BLAS, true);
+
+      rst::subtract(&out1_c_l_r[0], &out2_c_l_r[0], out2_c_l_r.size());
+      if (rst::vectorNorm(&out1_c_l_r[0], out1_c_l_r.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractFieldFieldVector (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l_r[0], out1_c_l_r.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
       }
       } // end scope
 
       { // start scope
-      *outStream << "\n************ Checking scaleFields ************\n";
-      int c=5, p=9, f=7, d1=7, d2=13;
+      *outStream << "\n************ Checking contractFieldFieldTensor ************\n";
 
-      FieldContainer<double> data_c_f(c, f);
-      FieldContainer<double> datainv_c_f(c, f);
-      FieldContainer<double> out_c_f_p(c, f, p);
-      FieldContainer<double> outi_c_f_p(c, f, p);
-      FieldContainer<double> out_c_f_p_d(c, f, p, d1);
-      FieldContainer<double> outi_c_f_p_d(c, f, p, d1);
-      FieldContainer<double> out_c_f_p_d_d(c, f, p, d1, d2);
-      FieldContainer<double> outi_c_f_p_d_d(c, f, p, d1, d2);
-      double zero = INTREPID_TOL*100.0;
+      int c=100000, p=9, l=3, r=7, d1=13, d2=5;
+
+      FieldContainer<double> in_c_l_p_d_d(c, l, p, d1, d2);
+      FieldContainer<double> in_c_r_p_d_d(c, r, p, d1, d2);
+      FieldContainer<double> out1_c_l_r(c, l, r);
+      FieldContainer<double> out2_c_l_r(c, l, r);
+      double zero = INTREPID_TOL*10000.0;
 
       // fill with random numbers
-      for (int i=0; i<out_c_f_p.size(); i++) {
-        out_c_f_p[i] = Teuchos::ScalarTraits<double>::random();
-        outi_c_f_p[i] = out_c_f_p[i];
+      for (int i=0; i<in_c_l_p_d_d.size(); i++) {
+        in_c_l_p_d_d[i] = Teuchos::ScalarTraits<double>::random();
       }
-      for (int i=0; i<out_c_f_p_d.size(); i++) {
-        out_c_f_p_d[i] = Teuchos::ScalarTraits<double>::random();
-        outi_c_f_p_d[i] = out_c_f_p_d[i];
-      }
-      for (int i=0; i<out_c_f_p_d_d.size(); i++) {
-        out_c_f_p_d_d[i] = Teuchos::ScalarTraits<double>::random();
-        outi_c_f_p_d_d[i] = out_c_f_p_d_d[i];
-      }
-      for (int i=0; i<data_c_f.size(); i++) {
-        data_c_f[i] = Teuchos::ScalarTraits<double>::random();
-        datainv_c_f[i] = 1.0 / data_c_f[i];
+      for (int i=0; i<in_c_r_p_d_d.size(); i++) {
+        in_c_r_p_d_d[i] = Teuchos::ScalarTraits<double>::random();
       }
 
-      art::scaleFields<double>(out_c_f_p, data_c_f);
-      art::scaleFields<double>(out_c_f_p, datainv_c_f);
-      rst::subtract(&out_c_f_p[0], &outi_c_f_p[0], out_c_f_p.size());
-      if (rst::vectorNorm(&out_c_f_p[0], out_c_f_p.size(), NORM_ONE) > zero) {
-        *outStream << "\n\nINCORRECT scaleValue (1): check scalar inverse property\n\n";
-        errorFlag = -1000;
+      art::contractFieldFieldTensor<double>(out1_c_l_r, in_c_l_p_d_d, in_c_r_p_d_d, COMP_CPP);
+      art::contractFieldFieldTensor<double>(out2_c_l_r, in_c_l_p_d_d, in_c_r_p_d_d, COMP_BLAS);
+
+      rst::subtract(&out1_c_l_r[0], &out2_c_l_r[0], out2_c_l_r.size());
+      if (rst::vectorNorm(&out1_c_l_r[0], out1_c_l_r.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractFieldFieldTensor (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l_r[0], out1_c_l_r.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
       }
 
-      art::scaleFields<double>(out_c_f_p_d, data_c_f);
-      art::scaleFields<double>(out_c_f_p_d, datainv_c_f);
-      rst::subtract(&out_c_f_p_d[0], &outi_c_f_p_d[0], out_c_f_p_d.size());
-      if (rst::vectorNorm(&out_c_f_p_d[0], out_c_f_p_d.size(), NORM_ONE) > zero) {
-        *outStream << "\n\nINCORRECT scaleValue (2): check scalar inverse property\n\n";
-        errorFlag = -1000;
+      // with sumInto:
+      out1_c_l_r.initialize(2.0); out2_c_l_r.initialize(2.0);
+
+      art::contractFieldFieldTensor<double>(out1_c_l_r, in_c_l_p_d_d, in_c_r_p_d_d, COMP_CPP, true);
+      art::contractFieldFieldTensor<double>(out2_c_l_r, in_c_l_p_d_d, in_c_r_p_d_d, COMP_BLAS, true);
+
+      rst::subtract(&out1_c_l_r[0], &out2_c_l_r[0], out2_c_l_r.size());
+      if (rst::vectorNorm(&out1_c_l_r[0], out1_c_l_r.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractFieldFieldTensor (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l_r[0], out1_c_l_r.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+      } // end scope
+
+      { // start scope
+      *outStream << "\n************ Checking contractDataFieldScalar ************\n";
+
+      int c=5, p=9, l=7;
+
+      FieldContainer<double> in_c_l_p(c, l, p);
+      FieldContainer<double> data_c_p(c, p);
+      FieldContainer<double> data_c_1(c, 1);
+      FieldContainer<double> out1_c_l(c, l);
+      FieldContainer<double> out2_c_l(c, l);
+      double zero = INTREPID_TOL*10000.0;
+
+      // fill with random numbers
+      for (int i=0; i<in_c_l_p.size(); i++) {
+        in_c_l_p[i] = Teuchos::ScalarTraits<double>::random();
+      }
+      for (int i=0; i<data_c_p.size(); i++) {
+        data_c_p[i] = Teuchos::ScalarTraits<double>::random();
+      }
+      for (int i=0; i<data_c_1.size(); i++) {
+        data_c_1[i] = Teuchos::ScalarTraits<double>::random();
       }
 
-      art::scaleFields<double>(out_c_f_p_d_d, data_c_f);
-      art::scaleFields<double>(out_c_f_p_d_d, datainv_c_f);
-      rst::subtract(&out_c_f_p_d_d[0], &outi_c_f_p_d_d[0], out_c_f_p_d_d.size());
-      if (rst::vectorNorm(&out_c_f_p_d_d[0], out_c_f_p_d_d.size(), NORM_ONE) > zero) {
-        *outStream << "\n\nINCORRECT cloneScaleValue (3): check scalar inverse property\n\n";
-        errorFlag = -1000;
+      // nonconstant data
+      art::contractDataFieldScalar<double>(out1_c_l, data_c_p, in_c_l_p, COMP_CPP);
+      art::contractDataFieldScalar<double>(out2_c_l, data_c_p, in_c_l_p, COMP_BLAS);
+      rst::subtract(&out1_c_l[0], &out2_c_l[0], out2_c_l.size());
+      if (rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataFieldScalar (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+      // constant data
+      art::contractDataFieldScalar<double>(out1_c_l, data_c_1, in_c_l_p, COMP_CPP);
+      art::contractDataFieldScalar<double>(out2_c_l, data_c_1, in_c_l_p, COMP_BLAS);
+      rst::subtract(&out1_c_l[0], &out2_c_l[0], out2_c_l.size());
+      if (rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataFieldScalar (2): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+      // nonconstant data with sumInto
+      out1_c_l.initialize(2.0); out2_c_l.initialize(2.0);
+      art::contractDataFieldScalar<double>(out1_c_l, data_c_p, in_c_l_p, COMP_CPP, true);
+      art::contractDataFieldScalar<double>(out2_c_l, data_c_p, in_c_l_p, COMP_BLAS, true);
+      rst::subtract(&out1_c_l[0], &out2_c_l[0], out2_c_l.size());
+      if (rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataFieldScalar (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+      } // end scope
+
+      { // start scope
+      *outStream << "\n************ Checking contractDataFieldVector ************\n";
+
+      int c=100000, p=9, l=7, d=3;
+
+      FieldContainer<double> in_c_l_p_d(c, l, p, d);
+      FieldContainer<double> data_c_p_d(c, p, d);
+      FieldContainer<double> data_c_1_d(c, 1, d);
+      FieldContainer<double> out1_c_l(c, l);
+      FieldContainer<double> out2_c_l(c, l);
+      double zero = INTREPID_TOL*10000.0;
+
+      // fill with random numbers
+      for (int i=0; i<in_c_l_p_d.size(); i++) {
+        in_c_l_p_d[i] = Teuchos::ScalarTraits<double>::random();
+      }
+      for (int i=0; i<data_c_p_d.size(); i++) {
+        data_c_p_d[i] = Teuchos::ScalarTraits<double>::random();
+      }
+      for (int i=0; i<data_c_1_d.size(); i++) {
+        data_c_1_d[i] = Teuchos::ScalarTraits<double>::random();
+      }
+
+      // nonconstant data
+      art::contractDataFieldVector<double>(out1_c_l, data_c_p_d, in_c_l_p_d, COMP_CPP);
+      art::contractDataFieldVector<double>(out2_c_l, data_c_p_d, in_c_l_p_d, COMP_BLAS);
+      rst::subtract(&out1_c_l[0], &out2_c_l[0], out2_c_l.size());
+      if (rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataFieldVector (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+      // constant data
+      art::contractDataFieldVector<double>(out1_c_l, data_c_1_d, in_c_l_p_d, COMP_CPP);
+      art::contractDataFieldVector<double>(out2_c_l, data_c_1_d, in_c_l_p_d, COMP_BLAS);
+      rst::subtract(&out1_c_l[0], &out2_c_l[0], out2_c_l.size());
+      if (rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataFieldVector (2): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+      // nonconstant data with sumInto
+      out1_c_l.initialize(2.0); out2_c_l.initialize(2.0);
+      art::contractDataFieldVector<double>(out1_c_l, data_c_p_d, in_c_l_p_d, COMP_CPP, true);
+      art::contractDataFieldVector<double>(out2_c_l, data_c_p_d, in_c_l_p_d, COMP_BLAS, true);
+      rst::subtract(&out1_c_l[0], &out2_c_l[0], out2_c_l.size());
+      if (rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataFieldVector (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+      } // end scope
+
+      { // start scope
+      *outStream << "\n************ Checking contractDataFieldTensor ************\n";
+
+      int c=100000, p=9, l=7, d1=3, d2=13;
+
+      FieldContainer<double> in_c_l_p_d_d(c, l, p, d1, d2);
+      FieldContainer<double> data_c_p_d_d(c, p, d1, d2);
+      FieldContainer<double> data_c_1_d_d(c, 1, d1, d2);
+      FieldContainer<double> out1_c_l(c, l);
+      FieldContainer<double> out2_c_l(c, l);
+      double zero = INTREPID_TOL*10000.0;
+
+      // fill with random numbers
+      for (int i=0; i<in_c_l_p_d_d.size(); i++) {
+        in_c_l_p_d_d[i] = Teuchos::ScalarTraits<double>::random();
+      }
+      for (int i=0; i<data_c_p_d_d.size(); i++) {
+        data_c_p_d_d[i] = Teuchos::ScalarTraits<double>::random();
+      }
+      for (int i=0; i<data_c_1_d_d.size(); i++) {
+        data_c_1_d_d[i] = Teuchos::ScalarTraits<double>::random();
+      }
+
+      // nonconstant data
+      art::contractDataFieldTensor<double>(out1_c_l, data_c_p_d_d, in_c_l_p_d_d, COMP_CPP);
+      art::contractDataFieldTensor<double>(out2_c_l, data_c_p_d_d, in_c_l_p_d_d, COMP_BLAS);
+      rst::subtract(&out1_c_l[0], &out2_c_l[0], out2_c_l.size());
+      if (rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataFieldTensor (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+      // constant data
+      art::contractDataFieldTensor<double>(out1_c_l, data_c_1_d_d, in_c_l_p_d_d, COMP_CPP);
+      art::contractDataFieldTensor<double>(out2_c_l, data_c_1_d_d, in_c_l_p_d_d, COMP_BLAS);
+      rst::subtract(&out1_c_l[0], &out2_c_l[0], out2_c_l.size());
+      if (rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataFieldTensor (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+      // nonconstant data with sumInto
+      out1_c_l.initialize(2.0); out2_c_l.initialize(2.0);
+      art::contractDataFieldTensor<double>(out1_c_l, data_c_p_d_d, in_c_l_p_d_d, COMP_CPP, true);
+      art::contractDataFieldTensor<double>(out2_c_l, data_c_p_d_d, in_c_l_p_d_d, COMP_BLAS, true);
+      rst::subtract(&out1_c_l[0], &out2_c_l[0], out2_c_l.size());
+      if (rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataFieldTensor (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c_l[0], out1_c_l.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+      } // end scope
+
+      { // start scope
+      *outStream << "\n************ Checking contractDataDataScalar ************\n";
+
+      int c=100000, p=9;
+
+      FieldContainer<double> inl_c_p(c, p);
+      FieldContainer<double> inr_c_p(c, p);
+      FieldContainer<double> out1_c(c);
+      FieldContainer<double> out2_c(c);
+      double zero = INTREPID_TOL*10000.0;
+
+      // fill with random numbers
+      for (int i=0; i<inl_c_p.size(); i++) {
+        inl_c_p[i] = Teuchos::ScalarTraits<double>::random();
+      }
+      for (int i=0; i<inr_c_p.size(); i++) {
+        inr_c_p[i] = Teuchos::ScalarTraits<double>::random();
+      }
+
+      art::contractDataDataScalar<double>(out1_c, inl_c_p, inr_c_p, COMP_CPP);
+      art::contractDataDataScalar<double>(out2_c, inl_c_p, inr_c_p, COMP_BLAS);
+      rst::subtract(&out1_c[0], &out2_c[0], out2_c.size());
+      if (rst::vectorNorm(&out1_c[0], out1_c.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataDataScalar (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c[0], out1_c.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+      // with sumInto:
+      out1_c.initialize(2.0); out2_c.initialize(2.0);
+      art::contractDataDataScalar<double>(out1_c, inl_c_p, inr_c_p, COMP_CPP, true);
+      art::contractDataDataScalar<double>(out2_c, inl_c_p, inr_c_p, COMP_BLAS, true);
+      rst::subtract(&out1_c[0], &out2_c[0], out2_c.size());
+      if (rst::vectorNorm(&out1_c[0], out1_c.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataDataScalar (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c[0], out1_c.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+      } // end scope
+
+      { // start scope
+      *outStream << "\n************ Checking contractDataDataVector ************\n";
+
+      int c=100000, p=9, d=13;
+
+      FieldContainer<double> inl_c_p_d(c, p, d);
+      FieldContainer<double> inr_c_p_d(c, p, d);
+      FieldContainer<double> out1_c(c);
+      FieldContainer<double> out2_c(c);
+      double zero = INTREPID_TOL*10000.0;
+
+      // fill with random numbers
+      for (int i=0; i<inl_c_p_d.size(); i++) {
+        inl_c_p_d[i] = Teuchos::ScalarTraits<double>::random();
+      }
+      for (int i=0; i<inr_c_p_d.size(); i++) {
+        inr_c_p_d[i] = Teuchos::ScalarTraits<double>::random();
+      }
+
+      art::contractDataDataVector<double>(out1_c, inl_c_p_d, inr_c_p_d, COMP_CPP);
+      art::contractDataDataVector<double>(out2_c, inl_c_p_d, inr_c_p_d, COMP_BLAS);
+
+      rst::subtract(&out1_c[0], &out2_c[0], out2_c.size());
+      if (rst::vectorNorm(&out1_c[0], out1_c.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataDataVector (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c[0], out1_c.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+
+      // with sumInto:
+      out1_c.initialize(2.0); out2_c.initialize(2.0);
+
+      art::contractDataDataVector<double>(out1_c, inl_c_p_d, inr_c_p_d, COMP_CPP, true);
+      art::contractDataDataVector<double>(out2_c, inl_c_p_d, inr_c_p_d, COMP_BLAS, true);
+
+      rst::subtract(&out1_c[0], &out2_c[0], out2_c.size());
+      if (rst::vectorNorm(&out1_c[0], out1_c.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataDataVector (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c[0], out1_c.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+      } // end scope
+
+      { // start scope
+      *outStream << "\n************ Checking contractDataDataTensor ************\n";
+
+      int c=100000, p=9, d1=13, d2=5;
+
+      FieldContainer<double> inl_c_p_d_d(c, p, d1, d2);
+      FieldContainer<double> inr_c_p_d_d(c, p, d1, d2);
+      FieldContainer<double> out1_c(c);
+      FieldContainer<double> out2_c(c);
+      double zero = INTREPID_TOL*10000.0;
+
+      // fill with random numbers
+      for (int i=0; i<inl_c_p_d_d.size(); i++) {
+        inl_c_p_d_d[i] = Teuchos::ScalarTraits<double>::random();
+      }
+      for (int i=0; i<inr_c_p_d_d.size(); i++) {
+        inr_c_p_d_d[i] = Teuchos::ScalarTraits<double>::random();
+      }
+
+      art::contractDataDataTensor<double>(out1_c, inl_c_p_d_d, inr_c_p_d_d, COMP_CPP);
+      art::contractDataDataTensor<double>(out2_c, inl_c_p_d_d, inr_c_p_d_d, COMP_BLAS);
+
+      rst::subtract(&out1_c[0], &out2_c[0], out2_c.size());
+      if (rst::vectorNorm(&out1_c[0], out1_c.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataDataTensor (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c[0], out1_c.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
+      }
+
+      // with sumInto:
+      out1_c.initialize(2.0); out2_c.initialize(2.0);
+
+      art::contractDataDataTensor<double>(out1_c, inl_c_p_d_d, inr_c_p_d_d, COMP_CPP, true);
+      art::contractDataDataTensor<double>(out2_c, inl_c_p_d_d, inr_c_p_d_d, COMP_BLAS, true);
+
+      rst::subtract(&out1_c[0], &out2_c[0], out2_c.size());
+      if (rst::vectorNorm(&out1_c[0], out1_c.size(), NORM_ONE) > zero) {
+        *outStream << "\n\nINCORRECT contractDataDataTensor (1): check COMP_CPP vs. COMP_BLAS; "
+                   << " diff-1norm = " << rst::vectorNorm(&out1_c[0], out1_c.size(), NORM_ONE) << "\n\n";
+        errorFlag++;
       }
       } // end scope
 
