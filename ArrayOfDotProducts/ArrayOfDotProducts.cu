@@ -89,6 +89,20 @@ getElapsedTime(const timespec & start, const timespec & end) {
 
 __global__
 void
+doCudaClearCache_kernel(const unsigned int junkDataSize,
+                        const int * const __restrict__ dev_junkDataToClearTheCache,
+                        int * dev_result) {
+  unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
+  int partialSum = 0;
+  while (index < junkDataSize) {
+    partialSum += dev_junkDataToClearTheCache[index];
+    index += blockDim.x * gridDim.x;
+  }
+  atomicAdd(dev_result, partialSum);
+}
+
+__global__
+void
 doCudaDotProducts_Independent_kernel(const unsigned int numberOfDotProducts,
                                      const unsigned int maxNumberOfDotProducts,
                                      const unsigned int dotProductSize,
@@ -232,18 +246,27 @@ runCudaTest(const CudaStyle cudaStyle,
             const unsigned int dotProductSize,
             const unsigned int memorySize,
             const vector<float> & correctResults,
-            const float * dev_dotProductData_A,
-            const float * dev_dotProductData_B,
-            float * dev_dotProductResults,
-            vector<float> * dotProductResults) {
+            const ClearCacheStyle clearCacheStyle,
+            const int * const dev_junkDataToClearTheCache,
+            const unsigned int junkDataSize,
+            const float * const dev_dotProductData_A,
+            const float * const dev_dotProductData_B,
+            int * const dev_junkDataCounter,
+            unsigned int * const totalNumberOfRepeats,
+            float * const dev_dotProductResults,
+            vector<float> * const dotProductResults) {
   const unsigned int numberOfBlocks =
     min(maxNumberOfCudaBlocks,
         (unsigned int)ceil(numberOfDotProducts/float(numberOfThreadsPerBlock)));
 
   timespec tic;
+  double totalElapsedTime = 0;
   for (unsigned int repeatIndex = 0;
        repeatIndex < numberOfRepeats + 1; ++repeatIndex) {
-    if (repeatIndex == 1) {
+    *totalNumberOfRepeats = *totalNumberOfRepeats + 1;
+    if ((clearCacheStyle == DontClearCacheAfterEveryRepeat &&
+         repeatIndex == 1) ||
+        clearCacheStyle == ClearCacheAfterEveryRepeat) {
       tic = getTimePoint();
     }
 
@@ -272,9 +295,28 @@ runCudaTest(const CudaStyle cudaStyle,
     // wait for the kernel launch
     checkCudaError(cudaPeekAtLastError());
     checkCudaError(cudaDeviceSynchronize());
+    if (clearCacheStyle == ClearCacheAfterEveryRepeat) {
+      const timespec toc = getTimePoint();
+      const float elapsedTime = getElapsedTime(tic, toc);
+      totalElapsedTime += elapsedTime;
+
+      const unsigned int junkNumberOfBlocks =
+        min(maxNumberOfCudaBlocks,
+            (unsigned int)ceil(junkDataSize/float(numberOfThreadsPerBlock)));
+      doCudaClearCache_kernel<<<junkNumberOfBlocks,
+        numberOfThreadsPerBlock>>>(junkDataSize,
+                                   dev_junkDataToClearTheCache,
+                                   dev_junkDataCounter);
+      // wait for the kernel launch
+      checkCudaError(cudaPeekAtLastError());
+      checkCudaError(cudaDeviceSynchronize());
+    }
   }
-  const timespec toc = getTimePoint();
-  const float elapsedTime = getElapsedTime(tic, toc) / numberOfRepeats;
+  if (clearCacheStyle == DontClearCacheAfterEveryRepeat) {
+    const timespec toc = getTimePoint();
+    const float elapsedTime = getElapsedTime(tic, toc) / numberOfRepeats;
+    totalElapsedTime = elapsedTime;
+  }
   // copy over the results from the gpu to the cpu
   checkCudaError(cudaMemcpy(&dotProductResults->at(0), dev_dotProductResults,
                             numberOfDotProducts * sizeof(float),
@@ -292,7 +334,7 @@ runCudaTest(const CudaStyle cudaStyle,
                             numberOfDotProducts * sizeof(float),
                             cudaMemcpyHostToDevice));
 
-  return elapsedTime;
+  return totalElapsedTime;
 }
 
 double
@@ -303,15 +345,20 @@ runSwitchingCudaTest(const unsigned int numberOfRepeats,
                      const unsigned int dotProductSize,
                      const unsigned int memorySize,
                      const vector<float> & correctResults,
-                     const float * dev_dotProductData_LayoutLeft_A,
-                     const float * dev_dotProductData_LayoutLeft_B,
-                     const float * dev_dotProductData_LayoutRight_A,
-                     const float * dev_dotProductData_LayoutRight_B,
-                     float * dev_dotProductResults,
-                     vector<float> * dotProductResults) {
+                     const ClearCacheStyle clearCacheStyle,
+                     const int * const dev_junkDataToClearTheCache,
+                     const unsigned int junkDataSize,
+                     const float * const dev_dotProductData_LayoutLeft_A,
+                     const float * const dev_dotProductData_LayoutLeft_B,
+                     const float * const dev_dotProductData_LayoutRight_A,
+                     const float * const dev_dotProductData_LayoutRight_B,
+                     int * const dev_junkDataCounter,
+                     unsigned int * const totalNumberOfRepeats,
+                     float * const dev_dotProductResults,
+                     vector<float> * const dotProductResults) {
   // if i can't saturate occupancy, do the reduction version
-  //this number isn't right, i need to look at the plots.  see where the
-  //reduction 0 style actually starts beating the independent.
+  // i got this number by just looking at where the plots crossed, where
+  //  the reduction style actually starts beating the independent.
   if (numberOfDotProducts < 200) {
     const unsigned int numberOfThreadsPerBlock =
       std::min(unsigned(1024),
@@ -326,8 +373,13 @@ runSwitchingCudaTest(const unsigned int numberOfRepeats,
                   dotProductSize,
                   memorySize,
                   correctResults,
+                  clearCacheStyle,
+                  dev_junkDataToClearTheCache,
+                  junkDataSize,
                   dev_dotProductData_LayoutRight_A,
                   dev_dotProductData_LayoutRight_B,
+                  dev_junkDataCounter,
+                  totalNumberOfRepeats,
                   dev_dotProductResults,
                   dotProductResults);
   } else {
@@ -342,8 +394,13 @@ runSwitchingCudaTest(const unsigned int numberOfRepeats,
                   dotProductSize,
                   memorySize,
                   correctResults,
+                  clearCacheStyle,
+                  dev_junkDataToClearTheCache,
+                  junkDataSize,
                   dev_dotProductData_LayoutLeft_A,
                   dev_dotProductData_LayoutLeft_B,
+                  dev_junkDataCounter,
+                  totalNumberOfRepeats,
                   dev_dotProductResults,
                   dotProductResults);
   }
@@ -354,6 +411,29 @@ runSwitchingCudaTest(const unsigned int numberOfRepeats,
 
 
 #ifdef ENABLE_KOKKOS
+
+template <class DeviceType, class KokkosJunkVector>
+struct KokkosFunctor_ClearCache {
+
+  typedef size_t     value_type;
+  typedef DeviceType device_type;
+
+  KokkosJunkVector _junkDataToClearTheCache;
+
+  KokkosFunctor_ClearCache(KokkosJunkVector dev_junkDataToClearTheCache) :
+    _junkDataToClearTheCache(dev_junkDataToClearTheCache) {
+  }
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const unsigned int index,
+                  value_type & junkDataCounter) const {
+    junkDataCounter += _junkDataToClearTheCache(index);
+  }
+
+private:
+  KokkosFunctor_ClearCache();
+
+};
 
 template <class DeviceType, class KokkosDotProductData,
           class KokkosDotProductResults>
@@ -402,13 +482,18 @@ runKokkosTest(const unsigned int numberOfDotProducts,
               const vector<float> & correctResults,
               const string & kokkosFlavor,
               const ClearCacheStyle clearCacheStyle,
-              const vector<size_t> & junkDataToClearTheCache,
+              const vector<int> & junkDataToClearTheCache,
               size_t * junkDataCounter,
+              unsigned int * const totalNumberOfRepeats,
               vector<float> * dotProductResults) {
+
+  const unsigned int junkDataSize = junkDataToClearTheCache.size();
 
   typedef typename KokkosDotProductData::HostMirror     KokkosDotProductData_Host;
   typedef Kokkos::View<float*, DeviceType>              KokkosDotProductResults;
   typedef typename KokkosDotProductResults::HostMirror  KokkosDotProductResults_Host;
+  typedef Kokkos::View<int*, DeviceType>                KokkosJunkVector;
+  typedef typename KokkosJunkVector::HostMirror         KokkosJunkVector_Host;
 
   KokkosDotProductData dev_kokkosDotProductData_A("kokkos data A",
                                                   numberOfDotProducts,
@@ -427,6 +512,11 @@ runKokkosTest(const unsigned int numberOfDotProducts,
   KokkosDotProductResults_Host kokkosDotProductResults =
     Kokkos::create_mirror_view(dev_kokkosDotProductResults);
 
+  KokkosJunkVector dev_kokkosJunkDataToClearTheCache("kokkos junk data to clear cache",
+                                                     junkDataSize);
+  KokkosJunkVector_Host kokkosJunkDataToClearTheCache =
+    Kokkos::create_mirror_view(dev_kokkosJunkDataToClearTheCache);
+
   // copy the data into the device views and ship them over
   for (unsigned int dotProductIndex = 0;
        dotProductIndex < numberOfDotProducts; ++dotProductIndex) {
@@ -443,6 +533,18 @@ runKokkosTest(const unsigned int numberOfDotProducts,
   Kokkos::deep_copy(dev_kokkosDotProductData_A, kokkosDotProductData_A);
   Kokkos::deep_copy(dev_kokkosDotProductData_B, kokkosDotProductData_B);
 
+  // copy the data into the device views and ship them over
+  for (unsigned int junkDataIndex = 0;
+       junkDataIndex < junkDataSize; ++junkDataIndex) {
+    kokkosJunkDataToClearTheCache(junkDataIndex) =
+      junkDataToClearTheCache[junkDataIndex];
+  }
+  Kokkos::deep_copy(dev_kokkosJunkDataToClearTheCache, kokkosJunkDataToClearTheCache);
+
+  KokkosFunctor_ClearCache<DeviceType,
+                           KokkosJunkVector>
+    kokkosFunctor_ClearCache(dev_kokkosJunkDataToClearTheCache);
+
   // breaking formatting convention because holy freak that's long
   KokkosFunctor_Independent<DeviceType,
                             KokkosDotProductData,
@@ -456,6 +558,7 @@ runKokkosTest(const unsigned int numberOfDotProducts,
   double totalElapsedTime = 0;
   for (unsigned int repeatIndex = 0;
        repeatIndex < numberOfRepeats + 1; ++repeatIndex) {
+    *totalNumberOfRepeats = *totalNumberOfRepeats + 1;
     if ((clearCacheStyle == DontClearCacheAfterEveryRepeat &&
          repeatIndex == 1) ||
         clearCacheStyle == ClearCacheAfterEveryRepeat) {
@@ -474,17 +577,10 @@ runKokkosTest(const unsigned int numberOfDotProducts,
       totalElapsedTime += elapsedTime;
 
       // attempt to scrub all levels of cache
-#pragma omp parallel default(none)                      \
-  shared(junkDataToClearTheCache, junkDataCounter)
-      {
-        const size_t thisThreadsJunkDataCounter =
-          std::accumulate(junkDataToClearTheCache.begin(),
-                          junkDataToClearTheCache.end(), size_t(0));
-        // only one thread adds the junk counter so that the total
-        //  at the end is not a function of the number of threads.
-#pragma omp single
-        *junkDataCounter += thisThreadsJunkDataCounter;
-      }
+      size_t partialJunkDataCounter = 0;
+      Kokkos::parallel_reduce(junkDataSize, kokkosFunctor_ClearCache,
+                              partialJunkDataCounter);
+      *junkDataCounter += partialJunkDataCounter;
     }
   }
   if (clearCacheStyle == DontClearCacheAfterEveryRepeat) {
@@ -610,7 +706,29 @@ int main(int argc, char* argv[]) {
   // create some junk data to use in clearing the cache
   size_t junkDataCounter = 0;
   const size_t junkDataSize = 1e7;
-  const vector<size_t> junkDataToClearTheCache(junkDataSize, 1);
+  vector<int> junkDataToClearTheCache(junkDataSize, 0);
+  for (unsigned int i = 0; i < junkDataSize/100; ++i) {
+    junkDataToClearTheCache[(rand() / float(RAND_MAX))*junkDataSize] = 1;
+  }
+  int * dev_junkDataToClearTheCache;
+  checkCudaError(cudaMalloc((void **) &dev_junkDataToClearTheCache,
+                            junkDataSize * sizeof(int)));
+  checkCudaError(cudaMemcpy(dev_junkDataToClearTheCache,
+                            &junkDataToClearTheCache[0],
+                            junkDataSize * sizeof(int),
+                            cudaMemcpyHostToDevice));
+  int * dev_junkDataCounter;
+  checkCudaError(cudaMalloc((void **) &dev_junkDataCounter,
+                            sizeof(int)));
+  {
+    int temp = 0;
+    checkCudaError(cudaMemcpy(dev_junkDataCounter,
+                              &temp,
+                              sizeof(int),
+                              cudaMemcpyHostToDevice));
+  }
+
+  unsigned int totalNumberOfRepeats = 0;
 
   // for each dot product size
   for (unsigned int dotProductSizeIndex = 0;
@@ -710,6 +828,7 @@ int main(int argc, char* argv[]) {
         timespec tic;
         for (unsigned int repeatIndex = 0;
              repeatIndex < numberOfRepeats + 1; ++repeatIndex) {
+          ++totalNumberOfRepeats;
           if ((clearCacheStyle == DontClearCacheAfterEveryRepeat &&
                repeatIndex == 1) ||
               clearCacheStyle == ClearCacheAfterEveryRepeat) {
@@ -764,6 +883,7 @@ int main(int argc, char* argv[]) {
         timespec tic;
         for (unsigned int repeatIndex = 0;
              repeatIndex < numberOfRepeats + 1; ++repeatIndex) {
+          ++totalNumberOfRepeats;
           if ((clearCacheStyle == DontClearCacheAfterEveryRepeat &&
                repeatIndex == 1) ||
               clearCacheStyle == ClearCacheAfterEveryRepeat) {
@@ -794,7 +914,8 @@ int main(int argc, char* argv[]) {
             ompTimesMatrix[dotProductSizeIndex][memorySizeIndex] += elapsedTime;
 
             // attempt to scrub all levels of cache
-#pragma omp parallel default(none) shared(junkDataCounter)
+#pragma omp parallel default(none)                      \
+  shared(junkDataCounter, junkDataToClearTheCache)
             {
               const size_t thisThreadsJunkDataCounter =
                 std::accumulate(junkDataToClearTheCache.begin(),
@@ -844,8 +965,13 @@ int main(int argc, char* argv[]) {
                       dotProductSize,
                       memorySize,
                       correctResults,
+                      clearCacheStyle,
+                      dev_junkDataToClearTheCache,
+                      junkDataSize,
                       dev_dotProductData_LayoutLeft_A,
                       dev_dotProductData_LayoutLeft_B,
+                      dev_junkDataCounter,
+                      &totalNumberOfRepeats,
                       dev_dotProductResults,
                       &dotProductResults);
 
@@ -872,8 +998,13 @@ int main(int argc, char* argv[]) {
                       dotProductSize,
                       memorySize,
                       correctResults,
+                      clearCacheStyle,
+                      dev_junkDataToClearTheCache,
+                      junkDataSize,
                       dev_dotProductData_LayoutRight_A,
                       dev_dotProductData_LayoutRight_B,
+                      dev_junkDataCounter,
+                      &totalNumberOfRepeats,
                       dev_dotProductResults,
                       &dotProductResults);
 
@@ -886,10 +1017,15 @@ int main(int argc, char* argv[]) {
                              dotProductSize,
                              memorySize,
                              correctResults,
+                             clearCacheStyle,
+                             dev_junkDataToClearTheCache,
+                             junkDataSize,
                              dev_dotProductData_LayoutLeft_A,
                              dev_dotProductData_LayoutLeft_B,
                              dev_dotProductData_LayoutRight_A,
                              dev_dotProductData_LayoutRight_B,
+                             dev_junkDataCounter,
+                             &totalNumberOfRepeats,
                              dev_dotProductResults,
                              &dotProductResults);
       // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -918,6 +1054,7 @@ int main(int argc, char* argv[]) {
                                               clearCacheStyle,
                                               junkDataToClearTheCache,
                                               &junkDataCounter,
+                                              &totalNumberOfRepeats,
                                               &dotProductResults);
       }
       {
@@ -936,9 +1073,10 @@ int main(int argc, char* argv[]) {
                                               dotProductData_LayoutRight_B,
                                               correctResults,
                                               string("Kokkos cuda"),
-                                              DontClearCacheAfterEveryRepeat,
+                                              clearCacheStyle,
                                               junkDataToClearTheCache,
                                               &junkDataCounter,
+                                              &totalNumberOfRepeats,
                                               &dotProductResults);
       }
 
@@ -993,6 +1131,23 @@ int main(int argc, char* argv[]) {
                          prefix + string("kokkosCudaIndependentTimes") + suffix);
 #endif
 
+#ifdef ENABLE_KOKKOS
+  const unsigned int numberOfMethods = 7;
+#else
+  const unsigned int numberOfMethods = 5;
+#endif
+
+  const size_t junkDataSum =
+    std::accumulate(junkDataToClearTheCache.begin(),
+                    junkDataToClearTheCache.end(), size_t(0));
+  {
+    int temp = 0;
+    checkCudaError(cudaMemcpy(&temp,
+                              dev_junkDataCounter,
+                              sizeof(int),
+                              cudaMemcpyDeviceToHost));
+    junkDataCounter += temp;
+  }
   if (clearCacheStyle == DontClearCacheAfterEveryRepeat) {
     const size_t expectedDataCounter = 0;
     if (junkDataCounter != expectedDataCounter) {
@@ -1004,7 +1159,7 @@ int main(int argc, char* argv[]) {
     }
   } else {
     const size_t expectedDataCounter =
-      junkDataSize * size_t(3) * (numberOfRepeats + 1) * numberOfMemorySizes *
+      junkDataSum * size_t(numberOfMethods) * (numberOfRepeats + 1) * numberOfMemorySizes *
       numberOfDotProductSizes;
     if (junkDataCounter != expectedDataCounter) {
       fprintf(stderr, "for ClearCacheAfterEveryRepeat, invalid "
@@ -1015,6 +1170,15 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  const unsigned int expectedTotalNumberOfRepeats = numberOfMethods *
+    (numberOfRepeats + 1) * numberOfMemorySizes * numberOfDotProductSizes;
+  if (totalNumberOfRepeats != expectedTotalNumberOfRepeats) {
+    fprintf(stderr, "invalid totalNumberOfRepeats = %u (%e), it should be "
+            "%u (%e)\n",
+            totalNumberOfRepeats, float(totalNumberOfRepeats),
+            expectedTotalNumberOfRepeats, float(expectedTotalNumberOfRepeats));
+    exit(1);
+  }
 
 #ifdef ENABLE_KOKKOS
   Kokkos::finalize();

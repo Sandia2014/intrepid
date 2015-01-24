@@ -13,11 +13,11 @@ from mpl_toolkits.mplot3d import Axes3D
 from numpy import log10
 
 prefix = 'data/ArrayOfDotProducts_'
-#suffix = '_shuffler'
-#suffix = '_shadowfax'
 suffix = '_clearCache_shadowfax'
 outputPrefix = 'figures/'
 
+# read in all of the data.  
+# TODO: you'll need to disable everything that's not relevant here or it'll be angry about missing files
 dotProductSize = numpy.loadtxt(open(prefix + 'dotProductSize' + suffix + '.csv','rb'),delimiter=',',skiprows=0)
 memorySize = numpy.loadtxt(open(prefix + 'memorySize' + suffix + '.csv','rb'),delimiter=',',skiprows=0)
 numberOfDotProducts = numpy.loadtxt(open(prefix + 'numberOfDotProducts' + suffix + '.csv','rb'),delimiter=',',skiprows=0)
@@ -29,14 +29,20 @@ cudaSwitchingTimes = numpy.loadtxt(open(prefix + 'cudaSwitchingTimes' + suffix +
 kokkosOmpTimes = numpy.loadtxt(open(prefix + 'kokkosOmpTimes' + suffix + '.csv','rb'),delimiter=',',skiprows=0)
 kokkosCudaIndependentTimes = numpy.loadtxt(open(prefix + 'kokkosCudaIndependentTimes' + suffix + '.csv','rb'),delimiter=',',skiprows=0)
 
+# set up a list of the times and names, for easy iteration later
+# TODO: make this consistent with the files that you read in and/or care about
 allTimes = []
 allNames = []
+# NOTE: if you are doing comparisons against serial time, it's assumed that the first entry in allTimes is serial
 allTimes.append(serialTimes)
 allNames.append('serial')
+# NOTE: if you are doing comparisons against omp time, it's assumed that the second entry in allTimes is openmp.  if you aren't doing those comparisons, you should go disable that portion of this script.
 allTimes.append(ompTimes)
 allNames.append('omp')
+# NOTE: if you are doing comparisons against cuda time, it's assumed that the third entry in allTimes is cuda.  if you aren't doing those comparisons, you should go disable that portion of this script.
 allTimes.append(cudaIndependentTimes)
 allNames.append('cudaIndependent')
+# there are no assumptions about the rest of the ordering
 allTimes.append(cudaReductionTimes)
 allNames.append('cudaReduction')
 allTimes.append(cudaSwitchingTimes)
@@ -46,21 +52,20 @@ allNames.append('kokkosOmp')
 allTimes.append(kokkosCudaIndependentTimes)
 allNames.append('kokkosCudaIndependent')
 
-#markerPool = ['-', '--', '-.']
+# these are toggles for whether to make image files and whether to make orbit files for making movies
+makeImageFiles = True
+#makeImageFiles = False
+makeOrbitFilesForMovies = True
+#makeOrbitFilesForMovies = False
+numberOfOrbitFrames = 100
+
+
 #markerPool = ['-', '--', ':']
 markerPool = ['-', '--']
-#markerPool = ['-', '--']
 colors = cm.gist_ncar(numpy.linspace(1, 0, len(allTimes)))
 markers = []
 for i in range(len(allTimes)):
   markers.append(markerPool[i % len(markerPool)])
-
-makeImageFiles = True
-#makeImageFiles = False
-makeOrbits = True
-#makeOrbits = False
-numberOfOrbitFrames = 100
-
 
 fig3d = plt.figure(0)
 fig2d = plt.figure(1, figsize=(14, 6))
@@ -69,6 +74,8 @@ box2d = ax2d.get_position()
 ax2d.set_position([box2d.x0, box2d.y0, box2d.width * 0.60, box2d.height])
 bbox_to_anchor2d = (1.87, 0.5)
 
+# make an image of just the number of dot products
+# TODO: you might want to make an image of the number of cells, so you'd adjust this.
 fig3d = plt.figure(0)
 ax = fig3d.gca(projection='3d')
 ax.view_init(elev=0, azim=-111)
@@ -85,14 +92,18 @@ if (makeImageFiles == True):
 else:
   plt.show()
 
-# raw times
+# goal: make images showing just the raw times
+# find the min and max values across all flavors so that the color scale is the same for each graph
 maxValue = -10
 minValue = 10
 for timesIndex in numpy.arange(0, len(allTimes)):
   maxValue = numpy.max([maxValue, numpy.max(log10(allTimes[timesIndex]))])
   minValue = numpy.min([minValue, numpy.min(log10(allTimes[timesIndex]))])
+# make the color scale
 colorNormalizer = matplotlib.colors.Normalize(vmin=minValue, vmax=maxValue)
+# for each time
 for timesIndex in range(len(allTimes)):
+  # make a 3d plot
   fig3d = plt.figure(0)
   plt.clf()
   times = allTimes[timesIndex]
@@ -113,6 +124,7 @@ for timesIndex in range(len(allTimes)):
     print 'saved file to %s' % filename
   else:
     plt.show()
+# make a 2D plot of all flavors, for the smallest and largest sizes of memory
 fig2d = plt.figure(1)
 for memorySizeIndex in [-1, 0]:
   legendNames = []
@@ -138,7 +150,7 @@ for memorySizeIndex in [-1, 0]:
     plt.show()
 
 
-# normalized by memory size
+# now make plots that are normalized by memory size
 maxValue = -10
 minValue = 10
 for timesIndex in numpy.arange(0, len(allTimes)):
@@ -164,7 +176,8 @@ for timesIndex in range(len(allTimes)):
     filename = outputPrefix + 'NormalizedTime_' + name + suffix
     plt.savefig(filename + '.pdf')
     print 'saved file to %s' % filename
-    if (makeOrbits == True):
+# possibly make orbit plots for movies
+    if (makeOrbitFilesForMovies == True):
       for frameIndex in range(numberOfOrbitFrames):
         ax.view_init(elev=2, azim=360 * frameIndex / (numberOfOrbitFrames - 1))
         filename = outputPrefix + 'orbitFrames/NormalizedTime_' + name + suffix + '_%02d.pdf' % frameIndex
@@ -174,13 +187,14 @@ for timesIndex in range(len(allTimes)):
     plt.show()
 
 
-# relative speedups over serial
+# now make relative speedups over serial
 maxSpeedup = -10
 minSpeedup = 10
 for timesIndex in numpy.arange(1, len(allTimes)):
   maxSpeedup = numpy.max([maxSpeedup, numpy.max(log10(allTimes[0] / allTimes[timesIndex]))])
   minSpeedup = numpy.min([minSpeedup, numpy.min(log10(allTimes[0] / allTimes[timesIndex]))])
 colorNormalizer = matplotlib.colors.Normalize(vmin=minSpeedup, vmax=maxSpeedup)
+# intentionally start at 1 so that i don't compare serial to serial
 for timesIndex in numpy.arange(1, len(allTimes)):
   fig3d = plt.figure(0)
   plt.clf()
@@ -200,8 +214,7 @@ for timesIndex in numpy.arange(1, len(allTimes)):
     filename = outputPrefix + 'VersusSerial_' + name + suffix
     plt.savefig(filename + '.pdf')
     print 'saved file to %s' % filename
-    #if (makeOrbits == True and (timesIndex == 1 or timesIndex == 2 or timesIndex == 4 or timesIndex == 8 or timesIndex > 8)):
-    if (makeOrbits == True and timesIndex > 0):
+    if (makeOrbitFilesForMovies == True and timesIndex > 0):
       for frameIndex in range(numberOfOrbitFrames):
         ax.view_init(elev=2, azim=360 * frameIndex / (numberOfOrbitFrames - 1))
         filename = outputPrefix + 'orbitFrames/VersusSerial_' + name + suffix + '_%02d.pdf' % frameIndex
@@ -235,13 +248,15 @@ for memorySizeIndex in [-1, 0]:
     plt.show()
 
 
-# relative speedup over openmp
+# now make relative speedup over openmp
+# TODO: you might disable this part
 maxSpeedup = -10
 minSpeedup = 10
 for timesIndex in numpy.arange(2, len(allTimes)):
   maxSpeedup = numpy.max([maxSpeedup, numpy.max(log10(allTimes[1] / allTimes[timesIndex]))])
   minSpeedup = numpy.min([minSpeedup, numpy.min(log10(allTimes[1] / allTimes[timesIndex]))])
 colorNormalizer = matplotlib.colors.Normalize(vmin=minSpeedup, vmax=maxSpeedup)
+# intentionally start at 2 so that i don't compare serial or omp to omp
 for timesIndex in numpy.arange(2, len(allTimes)):
   fig3d = plt.figure(0)
   plt.clf()
@@ -261,7 +276,7 @@ for timesIndex in numpy.arange(2, len(allTimes)):
     filename = outputPrefix + 'VersusOmp_' + name + suffix
     plt.savefig(filename + '.pdf')
     print 'saved file to %s' % filename
-    if (makeOrbits == True and timesIndex > 1):
+    if (makeOrbitFilesForMovies == True and timesIndex > 1):
       for frameIndex in range(numberOfOrbitFrames):
         ax.view_init(elev=2, azim=360 * frameIndex / (numberOfOrbitFrames - 1))
         filename = outputPrefix + 'orbitFrames/VersusOmp_' + name + suffix + '_%02d.pdf' % frameIndex
@@ -294,12 +309,14 @@ for memorySizeIndex in [-1, 0]:
     plt.show()
 
 # relative speedup over cudaIndependent
+# TODO: you might disable this part
 maxSpeedup = -10
 minSpeedup = 10
 for timesIndex in numpy.arange(3, len(allTimes)):
   maxSpeedup = numpy.max([maxSpeedup, numpy.max(log10(allTimes[2] / allTimes[timesIndex]))])
   minSpeedup = numpy.min([minSpeedup, numpy.min(log10(allTimes[2] / allTimes[timesIndex]))])
 colorNormalizer = matplotlib.colors.Normalize(vmin=minSpeedup, vmax=maxSpeedup)
+# intentionally start at 3 so that i don't compare cuda or serial or omp to cuda
 for timesIndex in numpy.arange(3, len(allTimes)):
   fig3d = plt.figure(0)
   plt.clf()
@@ -319,8 +336,7 @@ for timesIndex in numpy.arange(3, len(allTimes)):
     filename = outputPrefix + 'VersusCudaIndependent_' + name + suffix
     plt.savefig(filename + '.pdf')
     print 'saved file to %s' % filename
-    #if (makeOrbits == True and (timesIndex == 4 or timesIndex == 8 or timesIndex == 10)):
-    if (makeOrbits == True and timesIndex > 2):
+    if (makeOrbitFilesForMovies == True and timesIndex > 2):
       for frameIndex in range(numberOfOrbitFrames):
         ax.view_init(elev=2, azim=360 * frameIndex / (numberOfOrbitFrames - 1))
         filename = outputPrefix + 'orbitFrames/VersusCudaIndependent_' + name + suffix + '_%02d.pdf' % frameIndex
@@ -353,7 +369,8 @@ for memorySizeIndex in [-1, 0]:
     plt.show()
 
 
-# just comparison of how kokkos is doing
+# these graphs are essentially duplicates of ones made already, but with a linear scale instead of logarithmic (by request of carter).
+# these graphs just compare kokkos omp versus openmp and kokkos cuda versus cuda
 
 # omp
 fig3d = plt.figure(0)
@@ -370,7 +387,7 @@ if (makeImageFiles == True):
   filename = outputPrefix + 'VersusOmp_kokkosOmp_linear' + suffix
   plt.savefig(filename + '.pdf')
   print 'saved file to %s' % filename
-  if (makeOrbits == True):
+  if (makeOrbitFilesForMovies == True):
     for frameIndex in range(numberOfOrbitFrames):
       ax.view_init(elev=2, azim=360 * frameIndex / (numberOfOrbitFrames - 1))
       filename = outputPrefix + 'orbitFrames/VersusOmp_kokkosOmp_linear' + suffix + '_%02d.pdf' % frameIndex
@@ -394,7 +411,7 @@ if (makeImageFiles == True):
   filename = outputPrefix + 'VersusCudaIndependent_kokkosCudaIndependent_linear' + suffix
   plt.savefig(filename + '.pdf')
   print 'saved file to %s' % filename
-  if (makeOrbits == True):
+  if (makeOrbitFilesForMovies == True):
     for frameIndex in range(numberOfOrbitFrames):
       ax.view_init(elev=2, azim=360 * frameIndex / (numberOfOrbitFrames - 1))
       filename = outputPrefix + 'orbitFrames/VersusCudaIndependent_kokkosCudaIndependent_linear' + suffix + '_%02d.pdf' % frameIndex
