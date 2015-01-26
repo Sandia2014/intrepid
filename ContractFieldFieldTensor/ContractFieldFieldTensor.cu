@@ -323,7 +323,7 @@ int main(int argc, char* argv[]) {
 
     typedef Kokkos::View<double *****, Kokkos::LayoutRight, Kokkos::OpenMP>
 	omp_input_view_t;
-    typedef Kokkos::View<double *****, Kokkos::LayoutRight, Kokkos::OpenMP>
+    typedef Kokkos::View<double ***, Kokkos::LayoutRight, Kokkos::OpenMP>
 	omp_output_view_t;
     typedef typename omp_input_view_t::HostMirror omp_input_host_t;
     typedef typename omp_output_view_t::HostMirror omp_output_host_t;
@@ -364,6 +364,7 @@ int main(int argc, char* argv[]) {
     Kokkos::create_mirror_view(omp_kokkosRight);
     omp_output_host_t omp_hostOut =
     Kokkos::create_mirror_view(omp_kokkosOut);
+
 
     printf("filling views\n");
 
@@ -458,6 +459,12 @@ int main(int argc, char* argv[]) {
     std::cout << "kokkos runtime of " << elapsedTime_kokkos_cuda_nocopy << std::endl;
     std::cout << "speed up of " <<
 	elapsedTime_serial/elapsedTime_kokkos_cuda_nocopy << std::endl;
+
+    std::cout << "kokkos omp runtime of " << elapsedTime_kokkos_omp_nocopy <<
+    std::endl;
+    std::cout << "speed up of " <<
+    elapsedTime_serial/elapsedTime_kokkos_omp_nocopy << std::endl;
+
     Kokkos::finalize();
 
     return 0;
